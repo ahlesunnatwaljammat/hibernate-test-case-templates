@@ -17,10 +17,16 @@ package org.hibernate.bugs;
 
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.hibernate.bugs.entities.Event;
+import org.hibernate.bugs.entities.User;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
+import org.hibernate.query.Query;
 import org.hibernate.testing.junit4.BaseCoreFunctionalTestCase;
+import org.junit.Assert;
 import org.junit.Test;
+
+import java.time.Instant;
 
 /**
  * This template demonstrates how to develop a test case for Hibernate ORM, using its built-in unit test framework.
@@ -37,8 +43,8 @@ public class ORMUnitTestCase extends BaseCoreFunctionalTestCase {
 	@Override
 	protected Class[] getAnnotatedClasses() {
 		return new Class[] {
-//				Foo.class,
-//				Bar.class
+				User.class,
+				Event.class
 		};
 	}
 
@@ -72,7 +78,26 @@ public class ORMUnitTestCase extends BaseCoreFunctionalTestCase {
 		// BaseCoreFunctionalTestCase automatically creates the SessionFactory and provides the Session.
 		Session s = openSession();
 		Transaction tx = s.beginTransaction();
-		// Do stuff...
+
+		User user = new User();
+		user.setUsername("nabbasi");
+		user.setAssignTo("xyz@example.com");
+		Assert.assertTrue((Long) s.save(user) > 0) ;
+
+		Event event = new Event();
+		event.setEventName("An event");
+		event.setEventData(Instant.now());
+		event.setUser(user);
+		Assert.assertTrue((Long) s.save(event) > 0);
+
+		Query<Event> eventQuery = s.createQuery("from Event", Event.class);
+		event = eventQuery.getSingleResult();
+		System.out.println(event);
+
+		eventQuery = s.createQuery("update Event AS e set e.user.assignTo=null where e.user.id = :userId");
+		eventQuery.setParameter("userId", 1);
+		Assert.assertTrue(eventQuery.executeUpdate() > 1);
+
 		tx.commit();
 		s.close();
 	}
